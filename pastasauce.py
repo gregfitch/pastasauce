@@ -2,9 +2,12 @@
 # x
 # x
 
-# import json
 import os
-from requests import Response, Session
+import datetime
+from requests import Session
+from urllib import parse
+
+__version__ = '0.1.0'
 
 
 class PastaSauce(object):
@@ -25,6 +28,11 @@ class PastaSauce(object):
     TEAM = 'team'
     COM = 'com'
     COM_PLUS = 'complus'
+    QUNIT = 'qunit'
+    JASMINE = 'jasmine'
+    YUI = 'YUI Test'
+    MOCHA = 'mocha'
+    CUSTOM = 'custom'
 
     def __init__(self, sauce_username=None, sauce_access_key=None):
         """"""
@@ -43,6 +51,10 @@ class PastaSauce(object):
         """"""
         return self.user.access_key
 
+    def get_headers(self):
+        """"""
+        return self.comm.get_headers()
+
     def get_sauce_labs_status(self):
         """"""
         url = 'info/status'
@@ -55,17 +67,291 @@ class PastaSauce(object):
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
+    def get_user_info(self):
+        """"""
+        url = 'users/%s' % self.user.username
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def get_user_activity(self):
+        """"""
+        url = '%s/activity' % self.user.username
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def get_account_usage(self, username=None, start=None, end=None):
+        """"""
+        user = username if bool(username) else self.comm.username
+        url = 'users/%s/usage%s' % \
+            (user, PastaHelper.get_date_encode_string(start, end))
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def create_sub_account(self, username, password, name, email, plan=None):
+        """"""
+        url = 'users/%s' % self.user.username
+        data = {}
+        data['username'] = username
+        data['password'] = password
+        data['name'] = name
+        data['email'] = email
+        if plan is not None:
+            data['plan'] = plan
+        return self.comm.send_request(PastaSauce.POST, url, data)
+
+    def update_subaccount_plan(self, username, plan):
+        """"""
+        url = '%s/subscription' % username
+        data = {'plan': plan, }
+        return self.comm.send_request(PastaSauce.POST, url, data)
+
+    def delete_subaccount_plan(self, username):
+        """"""
+        url = '%s/subscription' % username
+        data = None
+        return self.comm.send_request(PastaSauce.DELETE, url, data)
+
+    def get_user_concurrency(self):
+        """"""
+        url = 'users/%s/concurrency' % self.user.username
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def get_jobs(self, username=None, number_of_jobs=100, get_full_data=False,
+                 skip_jobs=0, jobs_from=None, jobs_to=None, output=None):
+        """"""
+        user = username if username is not None else self.user.username
+        url_args = {}
+        if number_of_jobs != 100 and number_of_jobs > 0:
+            url_args['limit'] = number_of_jobs
+        if get_full_data:
+            url_args['full'] = get_full_data
+        if skip_jobs > 0:
+            url_args['skip_jobs'] = skip_jobs
+        if jobs_from is not None:
+            url_args['from'] = jobs_from
+        if jobs_to is not None:
+            url_args['to'] = jobs_to
+        if output is not None:
+            url_args['format'] = output
+        url = '%s/jobs%s' % \
+            (user, PastaHelper.get_jobs_encode_string(url_args))
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def get_full_job_info(self, job_id):
+        """"""
+        url = '%s/jobs/%s' % (self.user.username, job_id)
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def update_job(self, job_id, name=None, tags=None, public=None,
+                   passed=None, build=None, custom_data=None):
+        """"""
+        url = '%s/jobs/%s' % (self.user.username, job_id)
+        data = {}
+        if name is not None:
+            data['name'] = name
+        if tags is not None:
+            data['tags'] = tags
+        if public is not None:
+            data['public'] = public
+        if passed is not None:
+            data['passed'] = passed
+        if build is not None:
+            data['build'] = build
+        if custom_data is not None:
+            data['custom_data'] = custom_data
+        if data == {}:
+            data = None
+        return self.comm.send_request(PastaSauce.PUT, url, data)
+
+    def delete_job(self, job_id):
+        """"""
+        url = '%s/jobs/%s' % (self.user.username, job_id)
+        data = None
+        return self.comm.send_request(PastaSauce.DELETE, url, data)
+
+    def stop_job(self, job_id):
+        """"""
+        url = '%s/jobs/%s/stop' % (self.user.username, job_id)
+        data = None
+        return self.comm.send_request(PastaSauce.PUT, url, data)
+
+    def get_job_asset_filenames(self, job_id):
+        """"""
+        url = '%s/jobs/%s/assets' % (self.user.username, job_id)
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def get_job_asset_file(self, job_id, file_name):
+        """"""
+        url = '%s/jobs/%s/assets/%s' % (self.user.username, job_id, file_name)
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def delete_job_asset_files(self, job_id):
+        """"""
+        url = '%s/jobs/%s/assets' % (self.user.username, job_id)
+        data = None
+        return self.comm.send_request(PastaSauce.DELETE, url, data)
+
+    def upload_file(self, file_name, file_type, file_path=None,
+                    overwrite=False):
+        """"""
+        if file_path is None:
+            file_path = '.'
+        if file_path.endswith('/'):
+            file_path = file_path[:-1]
+        if not os.path.isfile('%s/%s' % (file_path, file_name)):
+            raise Exception.OSError.FileNotFoundError(
+                '%s/%s not found' % (file_path, file_name))
+        url = 'storage/%s/%s%s' % (self.user.username,
+                                   file_name,
+                                   '?overwrite=true' if overwrite else '')
+        data = None
+        file_data = {'file': open('%s/%s' % (file_path, file_name), 'rb')}
+        return self.comm.send_request(PastaSauce.POST, url, data, file_data)
+
+    def get_storage_file_names(self):
+        """"""
+        url = 'storage/%s' % self.user.username
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def get_tunnel_ids(self, username=None):
+        """"""
+        user = username if username is not None else self.user.username
+        url = '%s/tunnels' % user
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def get_tunnel_info(self, tunnel_id):
+        """"""
+        url = '%s/tunnels/%s' % (self.user.username, tunnel_id)
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def delete_tunnel(self, tunnel_id):
+        """"""
+        url = '%s/tunnels/%s' % (self.user.username, tunnel_id)
+        data = None
+        return self.comm.send_request(PastaSauce.DELETE, url, data)
+
+    def start_js_unit_tests(self, platforms, test_url, framework,
+                            tunnel_id=None, parent=None, test_max=None):
+        """"""
+        url = '%s/js-tests' % self.user.username
+        data = {}
+        data['platforms'] = platforms
+        data['url'] = test_url
+        data['framework'] = framework
+        if tunnel_id is not None:
+            data['tunnelIdentifier'] = tunnel_id
+        elif parent is not None:
+            data['parentTunnel'] = parent
+        if test_max is not None:
+            data['maxDuration'] = test_max
+        return self.comm.send_request(PastaSauce.POST, url, data)
+
+    def get_unit_test_status(self, test_ids):
+        """"""
+        url = '%s/js-tests/status' % self.user.username
+        data = {}
+        data['js tests'] = test_ids
+        return self.comm.send_request(PastaSauce.POST, url, data)
+
     def get_bug_types(self):
         """"""
         url = 'bugs/types'
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
-    def get_user_info(self):
+    def get_bug_fields(self, bug_id):
         """"""
-        url = 'users/%s' % self.user.username
+        url = 'bugs/types/%s' % bug_id
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def get_bug_details(self, bug_id):
+        """"""
+        url = 'bugs/detail/%s' % bug_id
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
+    def update_bug(self, bug_id, title=None, description=None):
+        """"""
+        url = 'bugs/update/%s' % bug_id
+        data = {}
+        if title is not None:
+            data['Title'] = title
+        if description is not None:
+            data['Description'] = description
+        return self.comm.send_request(PastaSauce.PUT, url, data)
+
+
+class PastaHelper(object):
+    """"""
+
+    def date_type_base_valid(self, date):
+        """"""
+        if type(date) is not datetime.date and type(date) is not str:
+            return False
+        return True
+
+    def str_date_split(self, date_str):
+        split = date_str.split('-')
+        if len(split) != 3:
+            raise ValueError('str date must be "YYYY-MM-DD"')
+        try:
+            s_year = int(split[0])
+            s_month = int(split[1])
+            s_day = int(split[2])
+            return datetime.date(s_year, s_month, s_day)
+        except Exception:
+            raise ValueError('str date must be "YYYY-MM-DD"')
+
+    def check_dates(self, start, end):
+        """"""
+        if start is None and end is None:
+            return (None, None)
+        begin_set = None
+        end_set = None
+        if bool(start):
+            self.date_type_base_valid(start)
+            begin_set = self. \
+                str_date_split(start) if type(start) is str else start
+            if datetime.date.today() < begin_set:
+                begin_set = datetime.date.today()
+        if bool(end):
+            self.date_type_base_valid(end)
+            end_set = self. \
+                str_date_split(end) if type(end) is str else end
+        if bool(begin_set) and bool(end_set):
+            return (begin_set, end_set) if begin_set < end_set else \
+                   (end_set, begin_set)
+        if bool(begin_set):
+            return (begin_set, datetime.date.today())
+        return (datetime.date.min, end_set)
+
+    def get_date_encode_string(self, start, end):
+        url_data = {}
+        start_date, end_date = self.check_dates(start, end)
+        if bool(start_date):
+            url_data['start'] = start_date.isoformat()
+        if bool(end_date):
+            url_data['end'] = end_date.isoformat()
+        return ('?' + parse.urlencode(url_data)) if url_data != {} else ''
+
+    def get_jobs_encode_string(self, url_data):
+        return ('?' + parse.urlencode(url_data)) if url_data != {} else ''
+
+    def get_job_visibility_options(self):
+        return {'Public': {'public', 'public restricted', 'share', 'true'},
+                'Private': {'team', 'false', 'private'}, }
+
+    def get_unit_frameworks(self):
+        return ['qunit', 'jasmine', 'YUI Test', 'mocha', 'custom']
 
 
 class Account(object):
@@ -113,49 +399,61 @@ class SauceComm(object):
         """"""
         if type(user_account) is not Account:
             raise TypeError('Expected %s, received %s' %
-                            (type(Account), type(user_account)))
+                            (Account, type(user_account)))
         self.user = user_account
         self.request = Session()
-        self.response = Response()
         if self.user.username is not None and self.user.access_key is not None:
             self.request.auth = (self.user.username, self.user.access_key)
         self.request.headers.update({'Content-Type': 'application/json'})
         self.methods = {
-            SauceComm.DELETE: (
-                lambda x, y: self.request.delete(url=x, data=y)),
-            SauceComm.GET: (
-                lambda x, y: self.request.get(url=x, data=y)),
-            SauceComm.HEAD: (
-                lambda x, y: self.request.head(url=x, data=y)),
-            SauceComm.PATCH: (
-                lambda x, y: self.request.delete(url=x, data=y)),
-            SauceComm.POST: (
-                lambda x, y: self.request.post(url=x, data=y)),
-            SauceComm.PUT: (
-                lambda x, y: self.request.put(url=x, data=y)),
-            SauceComm.OPTIONS: (
-                lambda x, y: self.request.options(url=x, data=y)), }
+            SauceComm.DELETE: (lambda url, data:
+                               self.request.delete(url=url, data=data)),
+            SauceComm.GET: (lambda url, data:
+                            self.request.get(url=url, data=data)),
+            SauceComm.HEAD: (lambda url, data:
+                             self.request.head(url=url, data=data)),
+            SauceComm.PATCH: (lambda url, data:
+                              self.request.delete(url=url, data=data)),
+            SauceComm.POST: (lambda url, data, files=None:
+                             self.request.post(url=url, data=data, files=files)
+                             ),
+            SauceComm.PUT: (lambda url, data:
+                            self.request.put(url=url, data=data)),
+            SauceComm.OPTIONS: (lambda url, data:
+                                self.request.options(url=url, data=data)),
+        }
 
-    def send_request(self, method, url_append, extra_data=None):
+    def send_request(self, method, url_append, extra_data=None, files=None):
         """"""
         if method not in self.methods:
             raise InvalidProtocol('Unknown protocol "%s"' % method)
         full_url = 'https://saucelabs.com/rest/v1/%s' % url_append
-        self.response = self.methods[method](full_url, extra_data)
-        return self.response
+        if files is not None:
+            return self.methods[SauceComm.POST](full_url, extra_data, files)
+        return self.methods[method](full_url, extra_data)
+
+    def get_protocols(self):
+        """"""
+        protocols = []
+        for method in self.methods.keys():
+            protocols.append(method)
+        return protocols.sort()
+
+    def get_headers(self):
+        """"""
+        return self.request.headers
+
+
+class PastaConnect(object):
+    """"""
+
+    def __init__(self, user_account):
+        """"""
+        self.user = user_account
 
 
 class InvalidProtocol(Exception):
     """"""
-    def __init__(self, *args):
-        """"""
-        self.args = args
-
-    def __str__(self):
-        """"""
-        return str(self.args[0] if len(self.args) <= 1 else self.args)
-
-    def __repr__(self):
-        """"""
-        func_args = repr(self.args) if self.args else "()"
-        return self.__class__.__name__ + func_args
+    def __init__(self, message='', *args):
+        self.message = message
+        super(self).__init__(message, *args)
