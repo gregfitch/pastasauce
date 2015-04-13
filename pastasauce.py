@@ -4,8 +4,11 @@
 
 import os
 import datetime
+import re
+import requests
 from requests import Session
 from urllib import parse
+from bs4 import BeautifulSoup
 
 __version__ = '0.1.0'
 
@@ -450,6 +453,25 @@ class PastaConnect(object):
     def __init__(self, user_account):
         """"""
         self.user = user_account
+
+    def get_sauce_connect_links(self):
+        """"""
+        r = requests.get('https://docs.saucelabs.com/reference/sauce-connect')
+        soup = BeautifulSoup(r.text)
+        return self.links(soup.body)
+
+    def links(self, blob):
+        links = []
+        regex = re.compile('''\"https:\/\/s[a-zA-Z\./\-]*[\d\.]{5,}
+                           [a-zA-Z\./\-0-9]*[(gz|zip|dmg|exe)]\"''',
+                           re.VERBOSE)
+        pattern = regex.findall(blob)
+        if pattern is None:
+            return links
+        for match in pattern:
+            if match[1:-1] not in links:
+                links.append(match[1:-1])
+        return links
 
 
 class InvalidProtocol(Exception):
