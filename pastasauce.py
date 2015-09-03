@@ -6,11 +6,23 @@ import os
 import datetime
 import re
 import requests
+from sys import modules
 from requests import Session
 from urllib import parse
 from bs4 import BeautifulSoup
 
 __version__ = '0.1.0'
+
+
+def on_platforms(platforms):
+    def decorator(base_class):
+        module = modules[base_class.__module__].__dict__
+        for i, platform in enumerate(platforms):
+            d = dict(base_class.__dict__)
+            d['desired_capabilities'] = platform
+            name = "%s_%s" % (base_class.__name__, i + 1)
+            module[name] = type(name, (base_class,), d)
+    return decorator
 
 
 class PastaSauce(object):
