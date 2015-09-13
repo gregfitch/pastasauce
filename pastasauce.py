@@ -11,12 +11,14 @@ from requests import Session
 from urllib import parse
 from bs4 import BeautifulSoup
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
-# This decorator is required to iterate over browsers with pytest
 class PastaDecorator(object):
-
+    """
+    This decorator is required to iterate over browser
+    dictionary setups with pytest
+    """
     @classmethod
     def on_platforms(cls, platforms):
         def decorator(base_class):
@@ -30,7 +32,10 @@ class PastaDecorator(object):
 
 
 class PastaSauce(object):
-    """"""
+    """
+    Sauce Labs access object for use by Python 3
+    """
+    # obj HTTP communication strings
     DELETE = 'DELETE'
     GET = 'GET'
     HEAD = 'HEAD'
@@ -38,15 +43,18 @@ class PastaSauce(object):
     POST = 'POST'
     PUT = 'PUT'
     OPTIONS = 'OPTIONS'
+    # access command options
     ALL = 'all'
     APPIUM = 'appium'
     WEBDRIVER = 'webdriver'
     SELENIUM = 'selenium-rc'
+    # sub-account levels
     FREE = 'free'
     SMALL = 'small'
     TEAM = 'team'
     COM = 'com'
     COM_PLUS = 'complus'
+    # test types
     QUNIT = 'qunit'
     JASMINE = 'jasmine'
     YUI = 'YUI Test'
@@ -54,7 +62,14 @@ class PastaSauce(object):
     CUSTOM = 'custom'
 
     def __init__(self, sauce_username=None, sauce_access_key=None):
-        """"""
+        """
+        Build a user account from (in order):
+        1. passed values
+        2. envrionment variables 'SAUCE_USERNAME' and
+           'SAUCE_ACCESS_KEY'
+        3. NoneType (only unauthenticated commands
+           available to blank auth)
+        """
         if sauce_username is None:
             sauce_username = os.environ.get('SAUCE_USERNAME')
         if sauce_access_key is None:
@@ -310,7 +325,10 @@ class PastaSauce(object):
 
 
 class PastaHelper(object):
-    """"""
+    """
+    Internal helper functions for PastaSauce
+    Not intended for public use
+    """
 
     def date_type_base_valid(self, date):
         """"""
@@ -319,6 +337,7 @@ class PastaHelper(object):
         return True
 
     def str_date_split(self, date_str):
+        """"""
         split = date_str.split('-')
         if len(split) != 3:
             raise ValueError('str date must be "YYYY-MM-DD"')
@@ -354,6 +373,7 @@ class PastaHelper(object):
         return (datetime.date.min, end_set)
 
     def get_date_encode_string(self, start, end):
+        """"""
         url_data = {}
         start_date, end_date = self.check_dates(start, end)
         if bool(start_date):
@@ -363,21 +383,29 @@ class PastaHelper(object):
         return ('?' + parse.urlencode(url_data)) if url_data != {} else ''
 
     def get_jobs_encode_string(self, url_data):
+        """"""
         return ('?' + parse.urlencode(url_data)) if url_data != {} else ''
 
     def get_job_visibility_options(self):
+        """"""
         return {'Public': {'public', 'public restricted', 'share', 'true'},
                 'Private': {'team', 'false', 'private'}, }
 
     def get_unit_frameworks(self):
+        """"""
         return ['qunit', 'jasmine', 'YUI Test', 'mocha', 'custom']
 
 
 class Account(object):
-    """"""
+    """
+    Basic access account object for Sauce Labs
+    """
 
     def __init__(self, sauce_username=None, sauce_access_key=None):
-        """"""
+        """
+        Setup an account with a user and access key or an
+        empty call for unauthenticated requests
+        """
         if sauce_username is None or sauce_access_key is None:
             self.username = None
             self.access_key = None
@@ -386,7 +414,13 @@ class Account(object):
             self.access_key = '%s' % sauce_access_key
 
     def set_username(self, user):
-        """"""
+        """
+        Change the username.
+
+        :: Return True if successful
+        :: Clear user and access key information if passed
+           None and return False
+        """
         if user is None:
             self.username = None
             self.access_key = None
@@ -395,7 +429,13 @@ class Account(object):
         return True
 
     def set_access_key(self, access_key):
-        """"""
+        """
+        Change the user access_key.
+
+        :: Return True if successful
+        :: Clear user and access key information if passed
+           None and return False
+        """
         if access_key is None:
             self.username = None
             self.access_key = None
@@ -405,7 +445,14 @@ class Account(object):
 
 
 class SauceComm(object):
-    """"""
+    """
+    Setup and control PastaSauce communication to Sauce
+    Labs.
+
+    For unauthenticated commands, can setup with empty user
+    SauceComm(Account())
+    """
+    # HTTP request options
     DELETE = 'DELETE'
     GET = 'GET'
     HEAD = 'HEAD'
@@ -415,15 +462,24 @@ class SauceComm(object):
     OPTIONS = 'OPTIONS'
 
     def __init__(self, user_account):
-        """"""
+        """
+        Setup the SauceComm object including the personal
+        lambda dictionary of HTTP request methods.
+
+        Raise a TypeError if SauceComm is not given a
+        PastaSauce Account.
+        """
         if type(user_account) is not Account:
             raise TypeError('Expected %s, received %s' %
                             (Account, type(user_account)))
         self.user = user_account
         self.request = Session()
+        # set user authentication; if an empty user is sent assume the requesst
+        # does not require auth
         if self.user.username is not None and self.user.access_key is not None:
             self.request.auth = (self.user.username, self.user.access_key)
         self.request.headers.update({'Content-Type': 'application/json'})
+        # no switch statement in Python; use lambda dict instead
         self.methods = {
             SauceComm.DELETE: (lambda url, data:
                                self.request.delete(url=url, json=data)),
@@ -443,30 +499,44 @@ class SauceComm(object):
         }
 
     def send_request(self, method, url_append, extra_data=None, files=None):
-        """"""
+        """
+        Send the request object with data package and any
+        supplemental files to Sauce Labs.
+
+        Raise an InvalidProtocol exception if 'method' is
+        not in the class method list.
+        """
         if method not in self.methods:
             raise InvalidProtocol('Unknown protocol "%s"' % method)
         full_url = 'https://saucelabs.com/rest/v1/%s' % url_append
         if files is not None:
             return self.methods[SauceComm.POST](full_url, extra_data, files)
-        print('Data:\n', extra_data)
         return self.methods[method](full_url, extra_data)
 
     def get_protocols(self):
-        """"""
+        """
+        Return a sorted list of available protocols
+        """
         protocols = []
         for method in self.methods.keys():
             protocols.append(method)
         return protocols.sort()
 
     def get_headers(self):
-        """"""
+        """
+        Return request object headers
+        """
         return self.request.headers
 
 
 class PastaConnect(object):
-    """
-    Incomplete
+    """ Incomplete
+    Manage SauceConnect
+
+    To Do:
+    a) setup a tunnel
+    b) manage tunnels
+    c) tear down session tunnels when finished
     """
 
     def __init__(self, user_account):
@@ -474,13 +544,21 @@ class PastaConnect(object):
         self.user = user_account
 
     def get_sauce_connect_links(self):
-        """"""
+        """ Incomplete
+        Return SauceConnect URL links
+        """
         r = requests.get('https://docs.saucelabs.com/reference/sauce-connect')
         soup = BeautifulSoup(r.text)
         return self.links(soup.body)
 
     def links(self, blob):
-        """"""
+        """ Incomplete
+        Parse blob looking for GZ, ZIP, DMG and EXE links
+
+        :: Return [] if no file links are located
+        :: Return a list of links after successfully
+           parsing the blob
+        """
         links = []
         regex = re.compile('''\"https:\/\/s[a-zA-Z\./\-]*[\d\.]{5,}
                            [a-zA-Z\./\-0-9]*[(gz|zip|dmg|exe)]\"''',
@@ -495,7 +573,10 @@ class PastaConnect(object):
 
 
 class InvalidProtocol(Exception):
-    """"""
+    """
+    Raised when an unknown protocol is attempted during a
+    request submission
+    """
     def __init__(self, message='', *args):
         self.message = message
         super(self).__init__(message, *args)
