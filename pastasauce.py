@@ -176,7 +176,7 @@ class PastaSauce(object):
         if public is not None:
             data['public'] = public
         if passed is not None:
-            data['passed'] = 'true' if passed else 'false'
+            data['passed'] = passed
         if build is not None:
             data['build'] = build
         if custom_data is not None:
@@ -426,20 +426,20 @@ class SauceComm(object):
         self.request.headers.update({'Content-Type': 'application/json'})
         self.methods = {
             SauceComm.DELETE: (lambda url, data:
-                               self.request.delete(url=url, data=data)),
+                               self.request.delete(url=url, json=data)),
             SauceComm.GET: (lambda url, data:
-                            self.request.get(url=url, data=data)),
+                            self.request.get(url=url, json=data)),
             SauceComm.HEAD: (lambda url, data:
-                             self.request.head(url=url, data=data)),
+                             self.request.head(url=url, json=data)),
             SauceComm.PATCH: (lambda url, data:
-                              self.request.delete(url=url, data=data)),
+                              self.request.delete(url=url, json=data)),
             SauceComm.POST: (lambda url, data, files=None:
-                             self.request.post(url=url, data=data, files=files)
+                             self.request.post(url=url, json=data, files=files)
                              ),
             SauceComm.PUT: (lambda url, data:
-                            self.request.put(url=url, data=data)),
+                            self.request.put(url=url, json=data)),
             SauceComm.OPTIONS: (lambda url, data:
-                                self.request.options(url=url, data=data)),
+                                self.request.options(url=url, json=data)),
         }
 
     def send_request(self, method, url_append, extra_data=None, files=None):
@@ -449,6 +449,7 @@ class SauceComm(object):
         full_url = 'https://saucelabs.com/rest/v1/%s' % url_append
         if files is not None:
             return self.methods[SauceComm.POST](full_url, extra_data, files)
+        print('Data:\n', extra_data)
         return self.methods[method](full_url, extra_data)
 
     def get_protocols(self):
