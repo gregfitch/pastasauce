@@ -14,15 +14,19 @@ from bs4 import BeautifulSoup
 __version__ = '0.1.0'
 
 
-def on_platforms(platforms):
-    def decorator(base_class):
-        module = modules[base_class.__module__].__dict__
-        for i, platform in enumerate(platforms):
-            d = dict(base_class.__dict__)
-            d['desired_capabilities'] = platform
-            name = "%s_%s" % (base_class.__name__, i + 1)
-            module[name] = type(name, (base_class,), d)
-    return decorator
+# This decorator is required to iterate over browsers with pytest
+class PastaDecorator(object):
+
+    @classmethod
+    def on_platforms(cls, platforms):
+        def decorator(base_class):
+            module = modules[base_class.__module__].__dict__
+            for i, platform in enumerate(platforms):
+                d = dict(base_class.__dict__)
+                d['desired_capabilities'] = platform
+                name = "%s_%s" % (base_class.__name__, i + 1)
+                module[name] = type(name, (base_class,), d)
+        return decorator
 
 
 class PastaSauce(object):
@@ -172,7 +176,7 @@ class PastaSauce(object):
         if public is not None:
             data['public'] = public
         if passed is not None:
-            data['passed'] = passed
+            data['passed'] = 'true' if passed else 'false'
         if build is not None:
             data['build'] = build
         if custom_data is not None:
@@ -460,7 +464,9 @@ class SauceComm(object):
 
 
 class PastaConnect(object):
-    """"""
+    """
+    Incomplete
+    """
 
     def __init__(self, user_account):
         """"""
@@ -473,6 +479,7 @@ class PastaConnect(object):
         return self.links(soup.body)
 
     def links(self, blob):
+        """"""
         links = []
         regex = re.compile('''\"https:\/\/s[a-zA-Z\./\-]*[\d\.]{5,}
                            [a-zA-Z\./\-0-9]*[(gz|zip|dmg|exe)]\"''',
