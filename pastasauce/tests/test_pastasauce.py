@@ -1,14 +1,12 @@
 import os
 from pastasauce.pastasauce import PastaSauce, Account, SauceComm
-import random
-import string
 import requests
 import json
 import pytest
-import datetime
 
 INCOMPLETE = True
 no_user_account = True if os.environ['SAUCE_USERNAME'] is None else False
+test_user = {}
 
 
 class PastaTestHelper(object):
@@ -20,8 +18,27 @@ class PastaTestHelper(object):
         """
         get a random string of ASCII letters and number of length
         """
+        import random
+        import string
         return ''.join([random.choice(string.ascii_letters +
                        string.digits) for n in range(length)])
+
+    @classmethod
+    def build_test_user(cls):
+        from bs4 import BeautifulSoup
+        req = requests.get('http://www.behindthename.com/random/random.php?' +
+                           'number=1&gender=both&surname=&randomsurname=yes' +
+                           '&all=no&usage_eng=1')
+        soup = BeautifulSoup(req.content, 'html.parser')
+        name = ''
+        for tag in soup.find_all('a', class_='plain'):
+            name += ' ' + tag.string
+        name = name[1:]
+        test_user['username'] = 'ost' + PastaTestHelper.random_string(10)
+        test_user['password'] = PastaTestHelper.random_string(15)
+        test_user['fullname'] = name
+        test_user['emailadr'] = test_user['username'] + '@openstax.org'
+        return test_user
 
 
 def test_pastasauce_initialization():
@@ -108,6 +125,7 @@ def test_pastasauce_get_user_info():
 
 def run_saucelabs_test_action(platform, user):
     from selenium import webdriver
+    from datetime import datetime
     platform['name'] = 'PastaSauce_unittest_action' + \
                        datetime.today().isoformat()
     driver = webdriver.Remote(
@@ -115,28 +133,50 @@ def run_saucelabs_test_action(platform, user):
         (user.get_user(), user.get_access_key()),
         desired_capabilities=platform)
     driver.implicitly_wait(10)
+    driver.get("https://tutor-qa.openstax.org")
+    login = driver.find_element_by_link_text('Login')
+    login.click()
 
 
 @pytest.mark.skipif(no_user_account, reason='Need a SauceLabs account')
-def test_pastasauce_get_user_activity():
-    import datetime
+def test_pastasauce_get_current_job_activity():
+    # import datetime
+    import time
+    from multiprocessing import Process
     ps = PastaSauce()
-    user_activity = ps.get_user_activity()
+    user_activity = ps.get_current_job_activity()
     assert(type(user_activity) is requests.models.Response)
     assert(user_activity.status_code == requests.codes.ok)
     activity_data = json.loads(user_activity.text)
     assert(type(activity_data) is dict)
-    assert('jobs' in activity_data)
-    assert(activity_data['datestamp'][-1] == datetime.today().isoformat())
+    assert('subaccounts' in activity_data)
+    # assert(activity_data['datestamp'][-1] ==
+    #        datetime.date.today().isoformat())
     desired_cap = {
         'platform': "Mac OS X 10.9",
         'browserName': "chrome",
         'version': "31",
     }
-    run_saucelabs_test_action(desired_cap, ps)
+    proc = Process(target=run_saucelabs_test_action,
+                   args=(desired_cap, ps))
+    proc.start()
+    # run_saucelabs_test_action(desired_cap, ps)
     time.sleep(1)
-    user_activity = ps.get_user_activity()
-    assert(user_activity[ps.get_user]['in progress'] >= 1)  # test running
+    user_activity = ps.get_current_job_activity()
+    # with a test running check activity
+    activities = json.loads(user_activity.text)
+    assert('subaccounts' in activities)
+    activity = activities['subaccounts']
+    assert(ps.get_user() in activity)
+    user = activity[ps.get_user()]
+    assert(user['in progress'] >= 1)
+    proc.join()
+
+
+@pytest.mark.skipif(INCOMPLETE, reason='Incomplete')
+@pytest.mark.skipif(no_user_account, reason='Need a SauceLabs account')
+def test_pastasauce_get_user_activity():
+    """"""
 
 
 @pytest.mark.skipif(no_user_account, reason='Need a SauceLabs account')
@@ -151,32 +191,63 @@ def test_pastasauce_get_account_usage():
     assert(usage_data['username'] == ps.get_user())
 
 
-@pytest.mark.skipif(INCOMPLETE, reason='Incomplete')
 @pytest.mark.skipif(no_user_account, reason='Need a SauceLabs account')
 def test_pastasauce_create_sub_account():
+    user = PastaTestHelper.build_test_user()
     ps = PastaSauce()
-    ps.create_sub_account()
+    account = ps.create_sub_account(username=user['username'],
+                                    password=user['password'],
+                                    name=user['fullname'],
+                                    email=user['emailadr'])
+    assert(type(account) is requests.models.Response)
+    assert(account.status_code == requests.codes.created)
+    account_data = json.loads(account.text)
+    assert(type(account_data) is dict)
+    assert('first_name' in account_data)
+    assert(account_data['parent'] == ps.get_user())
+    assert(account_data['name'] == user['username'])
 
 
 @pytest.mark.skipif(INCOMPLETE, reason='Incomplete')
 @pytest.mark.skipif(no_user_account, reason='Need a SauceLabs account')
+@pytest.mark.skipif(test_user == {}, reason='Subaccount not initialized')
 def test_pastasauce_update_subaccount_plan():
     ps = PastaSauce()
-    ps.update_subaccount_plan()
+    new_plan = ps.update_subaccount_plan(test_user['username'], 'free')
+    assert(type(new_plan) is requests.models.Response)
+    assert(new_plan.status_code == requests.codes.ok)
+    new_plan_data = json.loads(new_plan.text)
+    assert(type(new_plan_data) is dict)
 
 
 @pytest.mark.skipif(INCOMPLETE, reason='Incomplete')
 @pytest.mark.skipif(no_user_account, reason='Need a SauceLabs account')
+@pytest.mark.skipif(test_user == {}, reason='Subaccount not initialized')
 def test_pastasauce_delete_subaccount_plan():
     ps = PastaSauce()
-    ps.delete_subaccount_plan()
+    removed = ps.delete_subaccount_plan(test_user['username'])
+    assert(type(removed) is requests.models.Response)
+    removed_data = json.loads(removed.text)
+    if removed.status_code != requests.codes.ok:
+        assert('message' in removed_data)
 
 
-@pytest.mark.skipif(INCOMPLETE, reason='Incomplete')
 @pytest.mark.skipif(no_user_account, reason='Need a SauceLabs account')
 def test_pastasauce_get_user_concurrency():
     ps = PastaSauce()
-    print(ps)
+    concurrent = ps.get_user_concurrency()
+    assert(type(concurrent) is requests.models.Response)
+    assert(concurrent.status_code == requests.codes.ok)
+    concurrent_data = json.loads(concurrent.text)
+    assert(type(concurrent_data) is dict)
+    assert('concurrency' in concurrent_data)
+    assert(ps.get_user() in concurrent_data['concurrency'])
+    user = concurrent_data['concurrency'][ps.get_user()]
+    remaining = user['remaining']['overall']
+    current = user['current']['overall']
+    limit = json.loads(ps.get_user_info().text)
+    limit = limit['concurrency_limit']['overall']
+    assert((remaining + current) == limit)
 
 
 @pytest.mark.skipif(INCOMPLETE, reason='Incomplete')

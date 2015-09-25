@@ -76,6 +76,7 @@ class PastaSauce(object):
             sauce_access_key = os.environ.get('SAUCE_ACCESS_KEY')
         self.user = Account(sauce_username, sauce_access_key)
         self.comm = SauceComm(self.user)
+        self.helper = PastaHelper()
 
     def get_user(self):
         """"""
@@ -107,6 +108,12 @@ class PastaSauce(object):
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
+    def get_current_job_activity(self):
+        """"""
+        url = '%s/activity' % self.user.username
+        data = None
+        return self.comm.send_request(PastaSauce.GET, url, data)
+
     def get_user_activity(self):
         """"""
         url = 'users/%s/activity' % self.user.username
@@ -117,7 +124,7 @@ class PastaSauce(object):
         """"""
         user = username if bool(username) else self.comm.user
         url = 'users/%s/usage%s' % \
-            (user, PastaHelper.get_date_encode_string(start, end))
+            (user, self.helper.get_date_encode_string(start, end))
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
@@ -129,8 +136,7 @@ class PastaSauce(object):
         data['password'] = password
         data['name'] = name
         data['email'] = email
-        if plan is not None:
-            data['plan'] = plan
+        data['plan'] = plan if plan else 'free'
         return self.comm.send_request(PastaSauce.POST, url, data)
 
     def update_subaccount_plan(self, username, plan):
@@ -169,7 +175,7 @@ class PastaSauce(object):
         if output is not None:
             url_args['format'] = output
         url = '%s/jobs%s' % \
-            (user, PastaHelper.get_jobs_encode_string(url_args))
+            (user, self.helper.get_jobs_encode_string(url_args))
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
@@ -355,12 +361,13 @@ class PastaHelper(object):
             return (None, None)
         begin_set = None
         end_set = None
+        today = datetime.date.today()
         if bool(start):
             self.date_type_base_valid(start)
             begin_set = self. \
                 str_date_split(start) if type(start) is str else start
-            if datetime.date.today() < begin_set:
-                begin_set = datetime.date.today()
+            if today < begin_set:
+                begin_set = today
         if bool(end):
             self.date_type_base_valid(end)
             end_set = self. \
@@ -369,7 +376,7 @@ class PastaHelper(object):
             return (begin_set, end_set) if begin_set < end_set else \
                    (end_set, begin_set)
         if bool(begin_set):
-            return (begin_set, datetime.date.today())
+            return (begin_set, today)
         return (datetime.date.min, end_set)
 
     def get_date_encode_string(self, start, end):
