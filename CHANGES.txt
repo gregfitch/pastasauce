@@ -1,1 +1,2 @@
+v0.1.2, 2015-09-25 -- fixed setup, license and package initialization
 v0.1.1, 2015-09-14 -- Initial build for packaging

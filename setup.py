@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='PastaSauce',
-    version='0.1.1',
+    name='pastasauce',
+    version='0.1.2',
     packages=find_packages(),
     scripts=[],
     # zip_safe=True,
@@ -23,7 +23,7 @@ setup(
     # use_2to3_fixers=[],
     author='OpenStax QA',
     author_email='greg@openstax.org',
-    description='Stax test base',
+    description='Sauce Labs interface for Python 3 exposing more of the SLAPI',
     license='Creative Commons Attribution 4.0 International Public License',
     keywords='',
     url='http://openstax.org',
