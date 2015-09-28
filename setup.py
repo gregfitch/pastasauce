@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pastasauce',
-    version='0.1.4',
+    version='0.1.5',
     packages=find_packages(),
     scripts=[],
     # zip_safe=True,
@@ -27,7 +27,7 @@ setup(
     license='Creative Commons Attribution 4.0 International Public License',
     keywords='',
     url='http://openstax.org',
-    long_description=open('README.md').read(),
+    # long_description=open('./README.md').read(),
     # test_suite=''
     # tests_require=[],
     # test_loader='',
