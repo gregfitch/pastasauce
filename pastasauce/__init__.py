@@ -1,1 +1,1 @@
-from .pastasauce import PastaSauce
+from .pastasauce import PastaSauce, PastaDecorator
