@@ -13,7 +13,7 @@ from requests import Session
 from urllib import parse
 from bs4 import BeautifulSoup
 
-__version__ = '0.1.1'
+__version__ = '0.1.8'
 
 
 class PastaDecorator(object):
