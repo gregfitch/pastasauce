@@ -109,7 +109,7 @@ def test_pastasauce_get_supported_platforms():
     failed_test = ps.get_supported_platforms('does_not_exist')
     assert(type(failed_test) is requests.models.Response)
     assert(failed_test.status_code != requests.codes.ok)
-    assert(failed_test.text == 'Not Found')
+    assert(not failed_test.ok)
 
 
 @pytest.mark.skipif(no_user_account, reason='Need a SauceLabs account')
@@ -161,7 +161,7 @@ def test_pastasauce_get_current_job_activity():
                    args=(desired_cap, ps))
     proc.start()
     # run_saucelabs_test_action(desired_cap, ps)
-    time.sleep(1)
+    time.sleep(3)
     user_activity = ps.get_current_job_activity()
     # with a test running check activity
     activities = json.loads(user_activity.text)
@@ -200,12 +200,15 @@ def test_pastasauce_create_sub_account():
                                     name=user['fullname'],
                                     email=user['emailadr'])
     assert(type(account) is requests.models.Response)
-    assert(account.status_code == requests.codes.created)
+    if account.status_code != requests.codes.created:
+        assert(account.status_code == requests.codes.bad_request)
+        assert(account.json()['errors'] == 'Subaccount capacity exhausted.')
+        return
     account_data = json.loads(account.text)
     assert(type(account_data) is dict)
     assert('first_name' in account_data)
     assert(account_data['parent'] == ps.get_user())
-    assert(account_data['name'] == user['username'])
+    assert(account_data['name'] == user['fullname'])
 
 
 @pytest.mark.skipif(INCOMPLETE, reason='Incomplete')

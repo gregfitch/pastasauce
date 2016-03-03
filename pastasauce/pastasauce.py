@@ -1,6 +1,8 @@
-# x
-# x
-# x
+"""
+Python API for SauceLabs Selenium testing.
+
+https://wiki.saucelabs.com/display/DOCS/The+Sauce+Labs+REST+API
+"""
 
 import os
 import datetime
@@ -15,12 +17,29 @@ __version__ = '0.1.1'
 
 
 class PastaDecorator(object):
-    """
-    This decorator is required to iterate over browser
-    dictionary setups with pytest
-    """
+    """Multi-browser test decorator for SauceLabs."""
+
     @classmethod
     def on_platforms(cls, platforms):
+        """
+        Iterate over browser setups.
+
+        Capability Options:
+            app (string): app file loaded to SauceLabs storage
+                          'sauce-storage:<filename>'
+            appiumVersion (string):
+            browserName (string): web browser name
+            deviceOrientation (string):
+            platform (string):
+            platformName (string):
+            platformVersion (string):
+            screenResolution (string):
+            recordScreenshots (bool): enable or disable screenshots
+                                      default: True
+            recordVideo (bool): enable or disable video recording
+                                default: True
+            version (string):
+        """
         def decorator(base_class):
             module = modules[base_class.__module__].__dict__
             for i, platform in enumerate(platforms):
@@ -32,9 +51,8 @@ class PastaDecorator(object):
 
 
 class PastaSauce(object):
-    """
-    Sauce Labs access object for use by Python 3
-    """
+    """SauceLabs access object for use by Python 3."""
+
     # obj HTTP communication strings
     DELETE = 'DELETE'
     GET = 'GET'
@@ -63,7 +81,8 @@ class PastaSauce(object):
 
     def __init__(self, sauce_username=None, sauce_access_key=None):
         """
-        Build a user account from (in order):
+        Build a user account from (in order).
+
         1. passed values
         2. envrionment variables 'SAUCE_USERNAME' and
            'SAUCE_ACCESS_KEY'
@@ -79,57 +98,57 @@ class PastaSauce(object):
         self.helper = PastaHelper()
 
     def get_user(self):
-        """"""
+        """Return the current username."""
         return self.user.username
 
     def get_access_key(self):
-        """"""
+        """Return the current user access key."""
         return self.user.access_key
 
     def get_headers(self):
-        """"""
+        """Return the current HTTP headers."""
         return self.comm.get_headers()
 
     def get_sauce_labs_status(self):
-        """"""
+        """Get the SauceLabs server status."""
         url = 'info/status'
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_supported_platforms(self, api):
-        """"""
+        """Get a list of platforms available on SauceLabs."""
         url = 'info/platforms/%s' % api
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_user_info(self):
-        """"""
+        """Get user information."""
         url = 'users/%s' % self.user.username
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_current_job_activity(self):
-        """"""
+        """Get current activity for a user."""
         url = '%s/activity' % self.user.username
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_user_activity(self):
-        """"""
+        """Get activity for a user."""
         url = 'users/%s/activity' % self.user.username
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_account_usage(self, username=None, start=None, end=None):
-        """"""
-        user = username if bool(username) else self.comm.user
+        """Get account usage for a user."""
+        user = username if bool(username) else self.comm.user.username
         url = 'users/%s/usage%s' % \
             (user, self.helper.get_date_encode_string(start, end))
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def create_sub_account(self, username, password, name, email, plan=None):
-        """"""
+        """Create a sub-account."""
         url = 'users/%s' % self.user.username
         data = {}
         data['username'] = username
@@ -140,26 +159,32 @@ class PastaSauce(object):
         return self.comm.send_request(PastaSauce.POST, url, data)
 
     def update_subaccount_plan(self, username, plan):
-        """"""
+        """Change a sub-account user plan.
+
+        Requires a partner account.
+        """
         url = '%s/subscription' % username
         data = {'plan': plan, }
         return self.comm.send_request(PastaSauce.POST, url, data)
 
     def delete_subaccount_plan(self, username):
-        """"""
+        """Delete a sub-account user plan.
+
+        Requires a partner account.
+        """
         url = '%s/subscription' % username
         data = None
         return self.comm.send_request(PastaSauce.DELETE, url, data)
 
     def get_user_concurrency(self):
-        """"""
+        """Get user concurrency limits."""
         url = 'users/%s/concurrency' % self.user.username
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_jobs(self, username=None, number_of_jobs=100, get_full_data=False,
                  skip_jobs=0, jobs_from=None, jobs_to=None, output=None):
-        """"""
+        """Get jobs run for a user."""
         user = username if username is not None else self.user.username
         url_args = {}
         if number_of_jobs != 100 and number_of_jobs > 0:
@@ -180,14 +205,14 @@ class PastaSauce(object):
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_full_job_info(self, job_id):
-        """"""
+        """Get the full information for a particular job."""
         url = '%s/jobs/%s' % (self.user.username, job_id)
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def update_job(self, job_id, name=None, tags=None, public=None,
                    passed=None, build=None, custom_data=None):
-        """"""
+        """Update a user job."""
         url = '%s/jobs/%s' % (self.user.username, job_id)
         data = {}
         if name is not None:
@@ -207,38 +232,38 @@ class PastaSauce(object):
         return self.comm.send_request(PastaSauce.PUT, url, data)
 
     def delete_job(self, job_id):
-        """"""
+        """Delete a user job."""
         url = '%s/jobs/%s' % (self.user.username, job_id)
         data = None
         return self.comm.send_request(PastaSauce.DELETE, url, data)
 
     def stop_job(self, job_id):
-        """"""
+        """Stop an active job."""
         url = '%s/jobs/%s/stop' % (self.user.username, job_id)
         data = None
         return self.comm.send_request(PastaSauce.PUT, url, data)
 
     def get_job_asset_filenames(self, job_id):
-        """"""
+        """Get asset filenames for a particular job."""
         url = '%s/jobs/%s/assets' % (self.user.username, job_id)
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_job_asset_file(self, job_id, file_name):
-        """"""
+        """Download an asset file."""
         url = '%s/jobs/%s/assets/%s' % (self.user.username, job_id, file_name)
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def delete_job_asset_files(self, job_id):
-        """"""
+        """Download asset files from a particular job."""
         url = '%s/jobs/%s/assets' % (self.user.username, job_id)
         data = None
         return self.comm.send_request(PastaSauce.DELETE, url, data)
 
     def upload_file(self, file_name, file_type, file_path=None,
                     overwrite=False):
-        """"""
+        """Upload a file to SauceStorage."""
         if file_path is None:
             file_path = '.'
         if file_path.endswith('/'):
@@ -254,33 +279,33 @@ class PastaSauce(object):
         return self.comm.send_request(PastaSauce.POST, url, data, file_data)
 
     def get_storage_file_names(self):
-        """"""
+        """Get the filenames for currently in SauceStorage."""
         url = 'storage/%s' % self.user.username
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_tunnel_ids(self, username=None):
-        """"""
+        """Get the IDs for actice Sauce tunnels."""
         user = username if username is not None else self.user.username
         url = '%s/tunnels' % user
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_tunnel_info(self, tunnel_id):
-        """"""
+        """Get the information for a specific tunnel."""
         url = '%s/tunnels/%s' % (self.user.username, tunnel_id)
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def delete_tunnel(self, tunnel_id):
-        """"""
+        """Delete a Sauce tunnel."""
         url = '%s/tunnels/%s' % (self.user.username, tunnel_id)
         data = None
         return self.comm.send_request(PastaSauce.DELETE, url, data)
 
     def start_js_unit_tests(self, platforms, test_url, framework,
                             tunnel_id=None, parent=None, test_max=None):
-        """"""
+        """Start javascript unit tests."""
         url = '%s/js-tests' % self.user.username
         data = {}
         data['platforms'] = platforms
@@ -295,32 +320,32 @@ class PastaSauce(object):
         return self.comm.send_request(PastaSauce.POST, url, data)
 
     def get_unit_test_status(self, test_ids):
-        """"""
+        """Get the status for a group of tests."""
         url = '%s/js-tests/status' % self.user.username
         data = {}
         data['js tests'] = test_ids
         return self.comm.send_request(PastaSauce.POST, url, data)
 
     def get_bug_types(self):
-        """"""
+        """Get the available bug types."""
         url = 'bugs/types'
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_bug_fields(self, bug_id):
-        """"""
+        """Get the data fields for a type of bug."""
         url = 'bugs/types/%s' % bug_id
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def get_bug_details(self, bug_id):
-        """"""
+        """Get details on a specific bug ID."""
         url = 'bugs/detail/%s' % bug_id
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
 
     def update_bug(self, bug_id, title=None, description=None):
-        """"""
+        """Update a bug."""
         url = 'bugs/update/%s' % bug_id
         data = {}
         if title is not None:
@@ -332,18 +357,19 @@ class PastaSauce(object):
 
 class PastaHelper(object):
     """
-    Internal helper functions for PastaSauce
-    Not intended for public use
+    Internal helper functions for PastaSauce.
+
+    Not intended for public use.
     """
 
     def date_type_base_valid(self, date):
-        """"""
+        """Validate a date format."""
         if type(date) is not datetime.date and type(date) is not str:
             return False
         return True
 
     def str_date_split(self, date_str):
-        """"""
+        """Split a date string."""
         split = date_str.split('-')
         if len(split) != 3:
             raise ValueError('str date must be "YYYY-MM-DD"')
@@ -356,7 +382,7 @@ class PastaHelper(object):
             raise ValueError('str date must be "YYYY-MM-DD"')
 
     def check_dates(self, start, end):
-        """"""
+        """Validate a pair of dates."""
         if start is None and end is None:
             return (None, None)
         begin_set = None
@@ -380,7 +406,7 @@ class PastaHelper(object):
         return (datetime.date.min, end_set)
 
     def get_date_encode_string(self, start, end):
-        """"""
+        """Encode a date string."""
         url_data = {}
         start_date, end_date = self.check_dates(start, end)
         if bool(start_date):
@@ -390,28 +416,27 @@ class PastaHelper(object):
         return ('?' + parse.urlencode(url_data)) if url_data != {} else ''
 
     def get_jobs_encode_string(self, url_data):
-        """"""
+        """Get a job encode string if required."""
         return ('?' + parse.urlencode(url_data)) if url_data != {} else ''
 
     def get_job_visibility_options(self):
-        """"""
+        """Return visibility options for a job."""
         return {'Public': {'public', 'public restricted', 'share', 'true'},
                 'Private': {'team', 'false', 'private'}, }
 
     def get_unit_frameworks(self):
-        """"""
+        """Get available javascript unit test frameworks."""
         return ['qunit', 'jasmine', 'YUI Test', 'mocha', 'custom']
 
 
 class Account(object):
-    """
-    Basic access account object for Sauce Labs
-    """
+    """Basic access account object for Sauce Labs."""
 
     def __init__(self, sauce_username=None, sauce_access_key=None):
-        """
-        Setup an account with a user and access key or an
-        empty call for unauthenticated requests
+        """Account initialization for SauceLabs.
+
+        Setup an account with a user and access key or an empty call for
+        unauthenticated requests.
         """
         if sauce_username is None or sauce_access_key is None:
             self.username = None
@@ -421,13 +446,7 @@ class Account(object):
             self.access_key = '%s' % sauce_access_key
 
     def set_username(self, user):
-        """
-        Change the username.
-
-        :: Return True if successful
-        :: Clear user and access key information if passed
-           None and return False
-        """
+        """Change the SauceLabs username."""
         if user is None:
             self.username = None
             self.access_key = None
@@ -436,13 +455,7 @@ class Account(object):
         return True
 
     def set_access_key(self, access_key):
-        """
-        Change the user access_key.
-
-        :: Return True if successful
-        :: Clear user and access key information if passed
-           None and return False
-        """
+        """Change the SauceLabs user access key."""
         if access_key is None:
             self.username = None
             self.access_key = None
@@ -453,12 +466,12 @@ class Account(object):
 
 class SauceComm(object):
     """
-    Setup and control PastaSauce communication to Sauce
-    Labs.
+    Setup and control PastaSauce communication to SauceLabs.
 
     For unauthenticated commands, can setup with empty user
     SauceComm(Account())
     """
+
     # HTTP request options
     DELETE = 'DELETE'
     GET = 'GET'
@@ -470,11 +483,9 @@ class SauceComm(object):
 
     def __init__(self, user_account):
         """
-        Setup the SauceComm object including the personal
-        lambda dictionary of HTTP request methods.
+        Initialize a SauceComm object for HTTP requests.
 
-        Raise a TypeError if SauceComm is not given a
-        PastaSauce Account.
+        Raise a TypeError if SauceComm is not given a PastaSauce Account.
         """
         if type(user_account) is not Account:
             raise TypeError('Expected %s, received %s' %
@@ -506,12 +517,10 @@ class SauceComm(object):
         }
 
     def send_request(self, method, url_append, extra_data=None, files=None):
-        """
-        Send the request object with data package and any
-        supplemental files to Sauce Labs.
+        """Send the request with the data and files to Sauce Labs.
 
-        Raise an InvalidProtocol exception if 'method' is
-        not in the class method list.
+        Raise an InvalidProtocol exception if <method> is not in the class
+        method list.
         """
         if method not in self.methods:
             raise InvalidProtocol('Unknown protocol "%s"' % method)
@@ -521,24 +530,19 @@ class SauceComm(object):
         return self.methods[method](full_url, extra_data)
 
     def get_protocols(self):
-        """
-        Return a sorted list of available protocols
-        """
+        """Return a sorted list of available protocols."""
         protocols = []
         for method in self.methods.keys():
             protocols.append(method)
         return protocols.sort()
 
     def get_headers(self):
-        """
-        Return request object headers
-        """
+        """Return request object headers."""
         return self.request.headers
 
 
 class PastaConnect(object):
-    """ Incomplete
-    Manage SauceConnect
+    """Manage SauceConnect.
 
     To Do:
     a) setup a tunnel
@@ -547,24 +551,25 @@ class PastaConnect(object):
     """
 
     def __init__(self, user_account):
-        """"""
+        """Initialize a SauceConnect object.
+
+        Incomplete
+        """
         self.user = user_account
 
     def get_sauce_connect_links(self):
-        """ Incomplete
-        Return SauceConnect URL links
+        """Return the SauceConnect URL links.
+
+        Incomplete
         """
         r = requests.get('https://docs.saucelabs.com/reference/sauce-connect')
         soup = BeautifulSoup(r.text)
         return self.links(soup.body)
 
     def links(self, blob):
-        """ Incomplete
-        Parse blob looking for GZ, ZIP, DMG and EXE links
+        """Parse blob looking for GZ, ZIP, DMG and EXE links.
 
-        :: Return [] if no file links are located
-        :: Return a list of links after successfully
-           parsing the blob
+        Incomplete
         """
         links = []
         regex = re.compile('''\"https:\/\/s[a-zA-Z\./\-]*[\d\.]{5,}
@@ -580,10 +585,16 @@ class PastaConnect(object):
 
 
 class InvalidProtocol(Exception):
+    """Protocol exception.
+
+    Raised when an unknown protocol is attempted during a request submission
     """
-    Raised when an unknown protocol is attempted during a
-    request submission
-    """
+
     def __init__(self, message='', *args):
+        """Initialize an exception."""
         self.message = message
         super(self).__init__(message, *args)
+
+    def __str__(self):
+        """Return string of the exception text."""
+        return repr(self.message)
