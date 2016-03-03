@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pastasauce',
-    version='0.1.6',
+    version='0.1.7',
     packages=find_packages(),
     scripts=[],
     # zip_safe=True,
@@ -26,7 +26,7 @@ setup(
     description='Sauce Labs interface for Python 3 exposing more of the SLAPI',
     license='Creative Commons Attribution 4.0 International Public License',
     keywords='',
-    url='http://openstax.org',
+	url='https://github.com/gregfitch/pastasauce',
     # long_description=open('./README.md').read(),
     # test_suite=''
     # tests_require=[],
