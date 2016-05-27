@@ -13,7 +13,7 @@ from requests import Session
 from urllib import parse
 from bs4 import BeautifulSoup
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 
 class PastaDecorator(object):
@@ -89,11 +89,11 @@ class PastaSauce(object):
         3. NoneType (only unauthenticated commands
            available to blank auth)
         """
-        if sauce_username is None:
-            sauce_username = os.environ.get('SAUCE_USERNAME')
-        if sauce_access_key is None:
-            sauce_access_key = os.environ.get('SAUCE_ACCESS_KEY')
-        self.user = Account(sauce_username, sauce_access_key)
+        sauce_user = os.getenv('SAUCE_USERNAME') if not sauce_username \
+            else sauce_username
+        sauce_key = os.getenv('SAUCE_ACCESS_KEY') if not sauce_access_key \
+            else sauce_access_key
+        self.user = Account(sauce_user, sauce_key)
         self.comm = SauceComm(self.user)
         self.helper = PastaHelper()
 
@@ -141,7 +141,7 @@ class PastaSauce(object):
 
     def get_account_usage(self, username=None, start=None, end=None):
         """Get account usage for a user."""
-        user = username if bool(username) else self.comm.user.username
+        user = username if username else self.comm.user.username
         url = 'users/%s/usage%s' % \
             (user, self.helper.get_date_encode_string(start, end))
         data = None
@@ -185,7 +185,7 @@ class PastaSauce(object):
     def get_jobs(self, username=None, number_of_jobs=100, get_full_data=False,
                  skip_jobs=0, jobs_from=None, jobs_to=None, output=None):
         """Get jobs run for a user."""
-        user = username if username is not None else self.user.username
+        user = username if not username else self.user.username
         url_args = {}
         if number_of_jobs != 100 and number_of_jobs > 0:
             url_args['limit'] = number_of_jobs
@@ -193,11 +193,11 @@ class PastaSauce(object):
             url_args['full'] = get_full_data
         if skip_jobs > 0:
             url_args['skip_jobs'] = skip_jobs
-        if jobs_from is not None:
+        if jobs_from:
             url_args['from'] = jobs_from
-        if jobs_to is not None:
+        if jobs_to:
             url_args['to'] = jobs_to
-        if output is not None:
+        if output:
             url_args['format'] = output
         url = '%s/jobs%s' % \
             (user, self.helper.get_jobs_encode_string(url_args))
@@ -215,19 +215,19 @@ class PastaSauce(object):
         """Update a user job."""
         url = '%s/jobs/%s' % (self.user.username, job_id)
         data = {}
-        if name is not None:
+        if name:
             data['name'] = name
-        if tags is not None:
+        if tags:
             data['tags'] = tags
-        if public is not None:
+        if public:
             data['public'] = public
-        if passed is not None:
+        if passed:
             data['passed'] = passed
-        if build is not None:
+        if build:
             data['build'] = build
-        if custom_data is not None:
+        if custom_data:
             data['custom_data'] = custom_data
-        if data == {}:
+        if not data:
             data = None
         return self.comm.send_request(PastaSauce.PUT, url, data)
 
@@ -264,16 +264,18 @@ class PastaSauce(object):
     def upload_file(self, file_name, file_type, file_path=None,
                     overwrite=False):
         """Upload a file to SauceStorage."""
-        if file_path is None:
+        if not file_path:
             file_path = '.'
         if file_path.endswith('/'):
             file_path = file_path[:-1]
         if not os.path.isfile('%s/%s' % (file_path, file_name)):
             raise Exception.OSError.FileNotFoundError(
                 '%s/%s not found' % (file_path, file_name))
-        url = 'storage/%s/%s%s' % (self.user.username,
-                                   file_name,
-                                   '?overwrite=true' if overwrite else '')
+        url = 'storage/%s/%s%s' % (
+            self.user.username,
+            file_name,
+            '?overwrite=true' if overwrite else ''
+        )
         data = None
         file_data = {'file': open('%s/%s' % (file_path, file_name), 'rb')}
         return self.comm.send_request(PastaSauce.POST, url, data, file_data)
@@ -286,7 +288,7 @@ class PastaSauce(object):
 
     def get_tunnel_ids(self, username=None):
         """Get the IDs for actice Sauce tunnels."""
-        user = username if username is not None else self.user.username
+        user = username if username else self.user.username
         url = '%s/tunnels' % user
         data = None
         return self.comm.send_request(PastaSauce.GET, url, data)
@@ -311,11 +313,11 @@ class PastaSauce(object):
         data['platforms'] = platforms
         data['url'] = test_url
         data['framework'] = framework
-        if tunnel_id is not None:
+        if tunnel_id:
             data['tunnelIdentifier'] = tunnel_id
-        elif parent is not None:
+        elif parent:
             data['parentTunnel'] = parent
-        if test_max is not None:
+        if test_max:
             data['maxDuration'] = test_max
         return self.comm.send_request(PastaSauce.POST, url, data)
 
@@ -348,9 +350,9 @@ class PastaSauce(object):
         """Update a bug."""
         url = 'bugs/update/%s' % bug_id
         data = {}
-        if title is not None:
+        if title:
             data['Title'] = title
-        if description is not None:
+        if description:
             data['Description'] = description
         return self.comm.send_request(PastaSauce.PUT, url, data)
 
@@ -364,7 +366,7 @@ class PastaHelper(object):
 
     def date_type_base_valid(self, date):
         """Validate a date format."""
-        if type(date) is not datetime.date and type(date) is not str:
+        if not isinstance(date, datetime.date) and not isinstance(date, str):
             return False
         return True
 
@@ -378,30 +380,32 @@ class PastaHelper(object):
             s_month = int(split[1])
             s_day = int(split[2])
             return datetime.date(s_year, s_month, s_day)
-        except Exception:
-            raise ValueError('str date must be "YYYY-MM-DD"')
+        except Exception as e:
+            raise ValueError(
+                'str date must be "YYYY-MM-DD" -- %s : %s' % (e, e.args)
+            )
 
     def check_dates(self, start, end):
         """Validate a pair of dates."""
-        if start is None and end is None:
+        if not start and not end:
             return (None, None)
         begin_set = None
         end_set = None
         today = datetime.date.today()
-        if bool(start):
+        if start:
             self.date_type_base_valid(start)
-            begin_set = self. \
-                str_date_split(start) if type(start) is str else start
+            begin_set = self.str_date_split(start) \
+                if isinstance(start, str) else start
             if today < begin_set:
                 begin_set = today
-        if bool(end):
+        if end:
             self.date_type_base_valid(end)
-            end_set = self. \
-                str_date_split(end) if type(end) is str else end
-        if bool(begin_set) and bool(end_set):
-            return (begin_set, end_set) if begin_set < end_set else \
-                   (end_set, begin_set)
-        if bool(begin_set):
+            end_set = self.str_date_split(end) \
+                if isinstance(end, str) else end
+        if begin_set and end_set:
+            return (begin_set, end_set) \
+                if begin_set < end_set else (end_set, begin_set)
+        if begin_set:
             return (begin_set, today)
         return (datetime.date.min, end_set)
 
@@ -409,9 +413,9 @@ class PastaHelper(object):
         """Encode a date string."""
         url_data = {}
         start_date, end_date = self.check_dates(start, end)
-        if bool(start_date):
+        if start_date:
             url_data['start'] = start_date.isoformat()
-        if bool(end_date):
+        if end_date:
             url_data['end'] = end_date.isoformat()
         return ('?' + parse.urlencode(url_data)) if url_data != {} else ''
 
@@ -421,8 +425,10 @@ class PastaHelper(object):
 
     def get_job_visibility_options(self):
         """Return visibility options for a job."""
-        return {'Public': {'public', 'public restricted', 'share', 'true'},
-                'Private': {'team', 'false', 'private'}, }
+        return {
+            'Public': {'public', 'public restricted', 'share', 'true'},
+            'Private': {'team', 'false', 'private'},
+        }
 
     def get_unit_frameworks(self):
         """Get available javascript unit test frameworks."""
@@ -438,7 +444,7 @@ class Account(object):
         Setup an account with a user and access key or an empty call for
         unauthenticated requests.
         """
-        if sauce_username is None or sauce_access_key is None:
+        if not sauce_username or not sauce_access_key:
             self.username = None
             self.access_key = None
         else:
@@ -447,7 +453,7 @@ class Account(object):
 
     def set_username(self, user):
         """Change the SauceLabs username."""
-        if user is None:
+        if not user:
             self.username = None
             self.access_key = None
             return False
@@ -456,7 +462,7 @@ class Account(object):
 
     def set_access_key(self, access_key):
         """Change the SauceLabs user access key."""
-        if access_key is None:
+        if not access_key:
             self.username = None
             self.access_key = None
             return False
@@ -473,13 +479,13 @@ class SauceComm(object):
     """
 
     # HTTP request options
-    DELETE = 'DELETE'
-    GET = 'GET'
-    HEAD = 'HEAD'
-    PATCH = 'PATCH'
-    POST = 'POST'
-    PUT = 'PUT'
-    OPTIONS = 'OPTIONS'
+    DELETE = PastaSauce.DELETE
+    GET = PastaSauce.GET
+    HEAD = PastaSauce.HEAD
+    PATCH = PastaSauce.PATCH
+    POST = PastaSauce.POST
+    PUT = PastaSauce.PUT
+    OPTIONS = PastaSauce.OPTIONS
 
     def __init__(self, user_account):
         """
@@ -487,33 +493,40 @@ class SauceComm(object):
 
         Raise a TypeError if SauceComm is not given a PastaSauce Account.
         """
-        if type(user_account) is not Account:
+        if not isinstance(user_account, Account):
             raise TypeError('Expected %s, received %s' %
                             (Account, type(user_account)))
         self.user = user_account
         self.request = Session()
         # set user authentication; if an empty user is sent assume the requesst
         # does not require auth
-        if self.user.username is not None and self.user.access_key is not None:
+        if self.user.username and self.user.access_key:
             self.request.auth = (self.user.username, self.user.access_key)
         self.request.headers.update({'Content-Type': 'application/json'})
         # no switch statement in Python; use lambda dict instead
         self.methods = {
-            SauceComm.DELETE: (lambda url, data:
-                               self.request.delete(url=url, json=data)),
-            SauceComm.GET: (lambda url, data:
-                            self.request.get(url=url, json=data)),
-            SauceComm.HEAD: (lambda url, data:
-                             self.request.head(url=url, json=data)),
-            SauceComm.PATCH: (lambda url, data:
-                              self.request.delete(url=url, json=data)),
-            SauceComm.POST: (lambda url, data, files=None:
-                             self.request.post(url=url, json=data, files=files)
-                             ),
-            SauceComm.PUT: (lambda url, data:
-                            self.request.put(url=url, json=data)),
-            SauceComm.OPTIONS: (lambda url, data:
-                                self.request.options(url=url, json=data)),
+            SauceComm.DELETE: (
+                lambda url, data: self.request.delete(url=url, json=data)
+            ),
+            SauceComm.GET: (
+                lambda url, data: self.request.get(url=url, json=data)
+            ),
+            SauceComm.HEAD: (
+                lambda url, data: self.request.head(url=url, json=data)
+            ),
+            SauceComm.PATCH: (
+                lambda url, data: self.request.delete(url=url, json=data)
+            ),
+            SauceComm.POST: (
+                lambda url, data, files=None:
+                    self.request.post(url=url, json=data, files=files)
+            ),
+            SauceComm.PUT: (
+                lambda url, data: self.request.put(url=url, json=data)
+            ),
+            SauceComm.OPTIONS: (
+                lambda url, data: self.request.options(url=url, json=data)
+            ),
         }
 
     def send_request(self, method, url_append, extra_data=None, files=None):
@@ -525,7 +538,7 @@ class SauceComm(object):
         if method not in self.methods:
             raise InvalidProtocol('Unknown protocol "%s"' % method)
         full_url = 'https://saucelabs.com/rest/v1/%s' % url_append
-        if files is not None:
+        if files:
             return self.methods[SauceComm.POST](full_url, extra_data, files)
         return self.methods[method](full_url, extra_data)
 
@@ -576,7 +589,7 @@ class PastaConnect(object):
                            [a-zA-Z\./\-0-9]*[(gz|zip|dmg|exe)]\"''',
                            re.VERBOSE)
         pattern = regex.findall(blob)
-        if pattern is None:
+        if not pattern:
             return links
         for match in pattern:
             if match[1:-1] not in links:

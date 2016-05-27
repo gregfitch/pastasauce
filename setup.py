@@ -1,8 +1,10 @@
+"""Setup tools for PastaSauce."""
+
 from setuptools import setup, find_packages
 
 setup(
     name='pastasauce',
-    version='0.1.8',
+    version='0.1.9',
     packages=find_packages(),
     scripts=[],
     # zip_safe=True,
@@ -26,7 +28,7 @@ setup(
     description='Sauce Labs interface for Python 3 exposing more of the SLAPI',
     license='Creative Commons Attribution 4.0 International Public License',
     keywords='',
-	url='https://github.com/gregfitch/pastasauce',
+    url='https://github.com/gregfitch/pastasauce',
     # long_description=open('./README.md').read(),
     # test_suite=''
     # tests_require=[],
