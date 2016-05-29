@@ -56,3 +56,6 @@ docs/_build/
 # PyBuilder
 target/
 links.shell
+
+# System-specific
+.DS_Store
