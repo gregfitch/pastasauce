@@ -13,7 +13,7 @@ from requests import Session
 from urllib import parse
 from bs4 import BeautifulSoup
 
-__version__ = '0.1.9'
+__version__ = '0.1.10'
 
 
 class PastaDecorator(object):
@@ -96,6 +96,14 @@ class PastaSauce(object):
         self.user = Account(sauce_user, sauce_key)
         self.comm = SauceComm(self.user)
         self.helper = PastaHelper()
+        self.test_updates = {
+            'name': None,
+            'tags': None,
+            'public': None,
+            'passed': None,
+            'build': None,
+            'custom_data': None,
+        }
 
     def get_user(self):
         """Return the current username."""
