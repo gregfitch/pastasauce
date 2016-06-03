@@ -13,7 +13,7 @@ from requests import Session
 from urllib import parse
 from bs4 import BeautifulSoup
 
-__version__ = '0.1.10'
+__version__ = '0.1.11'
 
 
 class PastaDecorator(object):
@@ -229,7 +229,7 @@ class PastaSauce(object):
             data['tags'] = tags
         if public:
             data['public'] = public
-        if passed:
+        if passed is not None:
             data['passed'] = passed
         if build:
             data['build'] = build
