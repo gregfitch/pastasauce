@@ -13,7 +13,7 @@ from requests import Session
 from urllib import parse
 from bs4 import BeautifulSoup
 
-__version__ = '0.1.11'
+__version__ = '0.1.12'
 
 
 class PastaDecorator(object):
@@ -26,19 +26,30 @@ class PastaDecorator(object):
 
         Capability Options:
             app (string): app file loaded to SauceLabs storage
-                          'sauce-storage:<filename>'
-            appiumVersion (string):
+                'sauce-storage:<filename>'
+            appiumVersion (string): Appium version
+                '1.5.2', '1.5.1', '1.5.0', '1.4.16'
             browserName (string): web browser name
-            deviceOrientation (string):
+                'android', 'chrome', 'firefox', 'htmlunit',
+                'internet explorer', 'iPhone', 'iPad', 'opera', 'safari'
+            deviceOrientation (string): initial device orientation
+                'LANDSCAPE', 'PORTRAIT'
             platform (string):
-            platformName (string):
-            platformVersion (string):
+                Selenium: 'ANY', 'WINDOWS', 'XP', 'VISTA', 'MAC', 'LINUX',
+                    'UNIX', 'ANDROID'
+                SauceLabs: 'Windows 10', 'Windows 8.1', 'Windows 8',
+                    'Windows 7', 'Windows XP', 'Linux', 'OS X 10.11',
+                    'OS X 10.10', 'OS X 10.9', 'OS X 10.8'
+            platformName (string): Appium mobile OS
+                'iOS', 'Android', 'FirefoxOS'
+            platformVersion (string): Appium mobile OS version
             screenResolution (string):
+                '800x600', '1024x768', '1280x1024'
             recordScreenshots (bool): enable or disable screenshots
-                                      default: True
+                True (default), False
             recordVideo (bool): enable or disable video recording
-                                default: True
-            version (string):
+                True (default), False
+            version (string): browser version number or 'latest'
         """
         def decorator(base_class):
             module = modules[base_class.__module__].__dict__
