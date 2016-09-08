@@ -5,7 +5,6 @@ https://wiki.saucelabs.com/display/DOCS/The+Sauce+Labs+REST+API
 """
 
 import datetime
-import new
 import os
 import re
 import requests
@@ -60,7 +59,7 @@ class PastaDecorator(object):
                 d = dict(base_class.__dict__)
                 d['desired_capabilities'] = platform
                 name = "%s_%s" % (base_class.__name__, i + 1)
-                module[name] = new.classobj(name, (base_class,), d)
+                module[name] = type(name, (base_class,), d)
         return decorator
 
 
