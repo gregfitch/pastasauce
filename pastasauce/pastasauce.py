@@ -4,16 +4,18 @@ Python API for SauceLabs Selenium testing.
 https://wiki.saucelabs.com/display/DOCS/The+Sauce+Labs+REST+API
 """
 
-import os
 import datetime
+import new
+import os
 import re
 import requests
-from sys import modules
-from requests import Session
-from urllib import parse
-from bs4 import BeautifulSoup
 
-__version__ = '0.1.12'
+from bs4 import BeautifulSoup
+from requests import Session
+from sys import modules
+from urllib import parse
+
+__version__ = '0.1.13'
 
 
 class PastaDecorator(object):
@@ -31,7 +33,8 @@ class PastaDecorator(object):
                 '1.5.2', '1.5.1', '1.5.0', '1.4.16'
             browserName (string): web browser name
                 'android', 'chrome', 'firefox', 'htmlunit',
-                'internet explorer', 'iPhone', 'iPad', 'opera', 'safari'
+                'internet explorer', 'iPhone', 'iPad', 'MicrosoftEdge', opera',
+                'safari'
             deviceOrientation (string): initial device orientation
                 'LANDSCAPE', 'PORTRAIT'
             platform (string):
@@ -57,7 +60,7 @@ class PastaDecorator(object):
                 d = dict(base_class.__dict__)
                 d['desired_capabilities'] = platform
                 name = "%s_%s" % (base_class.__name__, i + 1)
-                module[name] = type(name, (base_class,), d)
+                module[name] = new.classobj(name, (base_class,), d)
         return decorator
 
 
